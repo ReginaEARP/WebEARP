@@ -6,10 +6,9 @@ import { supabase } from './services/supabaseClient';
 import { Dashboard } from './pages/dashboard/Dashboard';
 import { Clientes } from './pages/clientes/Clientes';
 import { Parceiros } from './pages/parceiros/Parceiros'
+import { Processos } from './pages/processos/Processos';
 import { Relatorios } from './pages/relatorios/Relatorios';
 import { Configuracoes } from './pages/configuracao/Configuracoes';
-
-// Importação da nova página de Usuários
 import { Usuarios } from './pages/usuarios/Usuarios';
 
 interface AppRoutesProps {
@@ -75,10 +74,10 @@ export function AppRoutes({ darkMode, setDarkMode }: AppRoutesProps) {
       <Route path="/" element={<Dashboard />} />
       <Route path="/clientes" element={<Clientes />} />
       <Route path="/parceiros" element={<Parceiros />} />
-      <Route path="/processos" element={<div className="p-6">Página de Processos (Em breve)</div>} />
+      <Route path="/processos" element={<Processos />} />
       <Route path="/agenda" element={<div className="p-6">Agenda & Prazos (Em breve)</div>} />
       <Route path="/financeiro" element={<div className="p-6">Módulo Financeiro (Em breve)</div>} />
-      <Route path="/relatorios" element={<Relatorios />} />
+      <Route path="/relatorios" element={<div className="p-6">Módulo Financeiro (Em breve)</div>} />
 
       {/* Rota de Gestão de Usuários com proteção de acesso */}
       <Route 
