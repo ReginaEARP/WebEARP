@@ -5,9 +5,16 @@ import { Layout } from './components/Layout';
 import { Login } from './pages/login/index';
 import { AppRoutes } from './Rotas';
 
+interface UserProfile {
+  id: string;
+  role?: string;
+  status?: string;
+}
+
 export function App() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   // Estado do Modo Escuro Global
   const [darkMode, setDarkMode] = useState(() => {
@@ -29,28 +36,32 @@ export function App() {
   const validarSessaoEStatus = async (currentSession: any) => {
     if (!currentSession) {
       setSession(null);
+      setUserProfile(null);
       setLoading(false);
       return;
     }
 
     try {
-      // Checa o status na tabela 'perfis' antes de aceitar a sessão
-      const { data: perfil } = await supabase
+      // Busca 'role' e 'status' na tabela 'perfis'
+      const { data: perfil, error } = await supabase
         .from('perfis')
-        .select('status')
+        .select('id, role, status')
         .eq('id', currentSession.user.id)
         .maybeSingle();
 
-      if (perfil && perfil.status === 'ativo') {
+      if (!error && perfil && perfil.status === 'ativo') {
         setSession(currentSession);
+        setUserProfile(perfil);
       } else {
-        // Se inativo, garante que desloga e bloqueia o acesso
+        // Se inativo, sem perfil ou com erro, encerra sessão
         await supabase.auth.signOut();
         setSession(null);
+        setUserProfile(null);
       }
     } catch (err) {
       console.error('Erro ao checar status do usuário:', err);
       setSession(null);
+      setUserProfile(null);
     } finally {
       setLoading(false);
     }
@@ -76,12 +87,14 @@ export function App() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 transition-colors">
-        <p className="text-slate-500 dark:text-slate-400 font-medium animate-pulse">Carregando ERP...</p>
+        <p className="text-slate-500 dark:text-slate-400 font-medium animate-pulse">
+          Carregando ERP...
+        </p>
       </div>
     );
   }
 
-  // Se NÃO estiver autenticado ou estive INATIVO, exibe apenas a página de Login
+  // Se NÃO estiver autenticado ou estiver INATIVO, exibe apenas a página de Login
   if (!session) {
     return <Login />;
   }
@@ -89,7 +102,7 @@ export function App() {
   // Se estiver autenticado e ATIVO, exibe o Layout abraçando as Rotas
   return (
     <BrowserRouter>
-      <Layout>
+      <Layout userProfile={userProfile}>
         <AppRoutes 
           darkMode={darkMode} 
           setDarkMode={setDarkMode} 

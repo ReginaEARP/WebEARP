@@ -5,6 +5,7 @@ import { supabase } from './services/supabaseClient';
 // Importação das páginas prontas
 import { Dashboard } from './pages/dashboard/Dashboard';
 import { Clientes } from './pages/clientes/Clientes';
+import { Parceiros } from './pages/parceiros/Parceiros'
 import { Relatorios } from './pages/relatorios/Relatorios';
 import { Configuracoes } from './pages/configuracao/Configuracoes';
 
@@ -73,23 +74,30 @@ export function AppRoutes({ darkMode, setDarkMode }: AppRoutesProps) {
     <Routes>
       <Route path="/" element={<Dashboard />} />
       <Route path="/clientes" element={<Clientes />} />
-      <Route path="/parceiros" element={<div className="p-6">Página de Parceiros & Médicos (Em breve)</div>} />
+      <Route path="/parceiros" element={<Parceiros />} />
       <Route path="/processos" element={<div className="p-6">Página de Processos (Em breve)</div>} />
       <Route path="/agenda" element={<div className="p-6">Agenda & Prazos (Em breve)</div>} />
       <Route path="/financeiro" element={<div className="p-6">Módulo Financeiro (Em breve)</div>} />
       <Route path="/relatorios" element={<Relatorios />} />
 
-      {/* Rota restrita para Admin, Master e Gerente */}
-      {podeGerenciarUsuarios && (
-        <Route path="/usuarios" element={<Usuarios />} />
-      )}
+      {/* Rota de Gestão de Usuários com proteção de acesso */}
+      <Route 
+        path="/usuarios" 
+        element={
+          podeGerenciarUsuarios ? (
+            <Usuarios />
+          ) : (
+            <Navigate to="/" replace />
+          )
+        } 
+      />
 
       <Route 
         path="/configuracoes" 
         element={<Configuracoes darkMode={darkMode} setDarkMode={setDarkMode} />} 
       />
 
-      {/* Redireciona rotas desconhecidas ou não autorizadas para a Dashboard */}
+      {/* Redireciona rotas desconhecidas para a Dashboard */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

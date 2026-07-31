@@ -22,24 +22,31 @@ interface SidebarProps {
 export function Sidebar({ userProfile }: SidebarProps) {
   const [roleLocal, setRoleLocal] = useState<string | null>(userProfile?.role || null);
 
+  // Mantém o estado sincronizado se a prop userProfile mudar
+  useEffect(() => {
+    if (userProfile?.role) {
+      setRoleLocal(userProfile.role);
+    }
+  }, [userProfile?.role]);
+
   // Busca a role diretamente do Supabase caso o prop userProfile não venha preenchido
   useEffect(() => {
     async function carregarRole() {
-      if (userProfile?.role) {
-        setRoleLocal(userProfile.role);
-        return;
-      }
+      if (userProfile?.role) return;
 
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const user = session?.user;
 
         if (user) {
-          // Tenta pegar dos metadados da sessão primeiro
+          // 1. Tenta pegar dos metadados da sessão primeiro
           const roleMeta = user.user_metadata?.role;
-          if (roleMeta) setRoleLocal(roleMeta);
+          if (roleMeta) {
+            setRoleLocal(roleMeta);
+            return;
+          }
 
-          // Tenta pegar da tabela perfis
+          // 2. Tenta pegar da tabela perfis
           const { data: perfil } = await supabase
             .from('perfis')
             .select('role')
@@ -51,16 +58,19 @@ export function Sidebar({ userProfile }: SidebarProps) {
           }
         }
       } catch (err) {
-        console.warn("Não foi possível carregar o nível do usuário na Sidebar:", err);
+        console.warn("Não foi possível carregar a role do usuário na Sidebar:", err);
       }
     }
 
     carregarRole();
   }, [userProfile]);
 
-  // Permite acesso à tela de usuários APENAS para Admin e Gerente
+  // Alinhado com a regra de acesso do AppRoutes (Admin, Master e Gerente)
   const roleFormatada = (roleLocal || userProfile?.role || '').toLowerCase();
-  const podeAcessarUsuarios = roleFormatada === 'admin' || roleFormatada === 'gerente';
+  const podeAcessarUsuarios = 
+    roleFormatada === 'admin' || 
+    roleFormatada === 'master' || 
+    roleFormatada === 'gerente';
 
   const menuItems = [
     { label: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -75,9 +85,9 @@ export function Sidebar({ userProfile }: SidebarProps) {
   ];
 
   return (
-    <aside className="w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 min-h-screen flex flex-col p-4 select-none">
+    <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 min-h-screen flex flex-col p-4 select-none">
       <div className="px-3 py-2 mb-4">
-        <h2 className="text-xl font-bold text-gray-800 dark:text-white tracking-wide">
+        <h2 className="text-xl font-bold text-slate-800 dark:text-white tracking-wide">
           Advocacia ERP
         </h2>
       </div>
@@ -94,8 +104,8 @@ export function Sidebar({ userProfile }: SidebarProps) {
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-blue-50 text-blue-600 dark:bg-gray-800 dark:text-blue-400 font-semibold'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
+                    ? 'bg-blue-50 text-blue-600 dark:bg-slate-800 dark:text-blue-400 font-semibold'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
                 }`
               }
             >
