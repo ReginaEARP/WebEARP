@@ -7,6 +7,7 @@ interface ModalHistoricoProps {
   onClose: () => void;
   processoId: string | null;
   numeroProtocolo?: string;
+  onSuccess?: () => void;
 }
 
 export function ModalHistoricoAndamento({ isOpen, onClose, processoId, numeroProtocolo }: ModalHistoricoProps) {
@@ -29,6 +30,7 @@ export function ModalHistoricoAndamento({ isOpen, onClose, processoId, numeroPro
   );
   const [descricao, setDescricao] = useState('');
   const [statusEtapa, setStatusEtapa] = useState('');
+  const [dataLimiteExigencia, setDataLimiteExigencia] = useState('');
 
   useEffect(() => {
     if (isOpen && processoId) {
@@ -112,7 +114,7 @@ export function ModalHistoricoAndamento({ isOpen, onClose, processoId, numeroPro
         setStatusOptions(lista);
         setStatusEtapa(lista[0]);
       } else {
-        const padroes = ['Protocolado / Entrada', 'Em Análise', 'Deferido', 'Indeferido'];
+        const padroes = ['Protocolado / Entrada', 'Em Análise', 'Exigência', 'Deferido', 'Indeferido'];
         
         for (const padrao of padroes) {
           await supabase.from('cadastros_gerais').insert([
@@ -131,6 +133,7 @@ export function ModalHistoricoAndamento({ isOpen, onClose, processoId, numeroPro
   const limparFormulario = () => {
     setDataMovimentacao(new Date().toISOString().split('T')[0]);
     setDescricao('');
+    setDataLimiteExigencia('');
   };
 
   const handleCadastrarNovoStatus = async (e: React.FormEvent) => {
@@ -169,6 +172,7 @@ export function ModalHistoricoAndamento({ isOpen, onClose, processoId, numeroPro
 
     setSaving(true);
     try {
+      // 1. Insere o andamento na tabela de histórico
       const { error } = await supabase.from('processo_andamentos').insert([
         {
           processo_id: processoId,
@@ -181,9 +185,37 @@ export function ModalHistoricoAndamento({ isOpen, onClose, processoId, numeroPro
 
       if (error) throw error;
 
+      // 2. MONTA OS DADOS PARA ATUALIZAR O PROCESSO PRINCIPAL
+      const isExigencia = statusEtapa.toLowerCase().includes('exigencia') || statusEtapa.toLowerCase().includes('exigência');
+      
+      const dadosAtualizacao: any = {
+        status: statusEtapa,
+        updated_at: new Date().toISOString()
+      };
+
+      // Se for exigência e o usuário preencheu a data, atualiza o prazo fatal; se não preencheu, pode limpar ou manter
+      if (isExigencia) {
+        dadosAtualizacao.data_limite_exigencia = dataLimiteExigencia || null;
+      } else {
+        // Se mudou para outro status que não é exigência, limpa o prazo fatal anterior se desejar
+        dadosAtualizacao.data_limite_exigencia = null;
+      }
+
+      // 3. ATUALIZA O STATUS PRINCIPAL NA TABELA DE PROCESSOS
+      const { error: errUpdateProcesso } = await supabase
+        .from('processos')
+        .update(dadosAtualizacao)
+        .eq('id', processoId);
+
+      if (errUpdateProcesso) throw errUpdateProcesso;
+
       limparFormulario();
       carregarAndamentos();
-      mostrarFeedback('Andamento adicionado com sucesso!', 'sucesso');
+
+      // 4. Dispara um aviso global para a página principal atualizar a tabela sozinha
+      window.dispatchEvent(new CustomEvent('processoAtualizado'));
+
+      mostrarFeedback('Andamento adicionado e status atualizado com sucesso!', 'sucesso');
     } catch (err: any) {
       mostrarFeedback('Erro ao salvar andamento: ' + err.message, 'erro');
     } finally {
@@ -211,6 +243,8 @@ export function ModalHistoricoAndamento({ isOpen, onClose, processoId, numeroPro
   };
 
   if (!isOpen) return null;
+
+  const isExigenciaSelecionada = statusEtapa.toLowerCase().includes('exigencia') || statusEtapa.toLowerCase().includes('exigência');
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
@@ -262,7 +296,7 @@ export function ModalHistoricoAndamento({ isOpen, onClose, processoId, numeroPro
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
             <div>
               <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-0.5">
-                Data
+                Data da Movimentação
               </label>
               <input
                 type="date"
@@ -303,6 +337,23 @@ export function ModalHistoricoAndamento({ isOpen, onClose, processoId, numeroPro
               </div>
             </div>
           </div>
+
+          {/* Campo condicional para Data Limite de Exigência (Prazo Fatal) */}
+          {isExigenciaSelecionada && (
+            <div className="p-3 bg-orange-50 dark:bg-orange-950/30 border border-orange-200 dark:border-orange-800/50 rounded-lg animate-fadeIn">
+              <label className="block text-[11px] font-semibold text-orange-800 dark:text-orange-300 mb-0.5 flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5 text-orange-600" />
+                Data Limite de Exigência (Prazo Fatal)
+              </label>
+              <input
+                type="date"
+                value={dataLimiteExigencia}
+                onChange={(e) => setDataLimiteExigencia(e.target.value)}
+                required={isExigenciaSelecionada}
+                className="w-full md:w-1/2 px-2.5 py-1 border border-orange-300 dark:border-orange-700 rounded-lg bg-white dark:bg-gray-900 text-xs text-gray-800 dark:text-gray-100"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-0.5">

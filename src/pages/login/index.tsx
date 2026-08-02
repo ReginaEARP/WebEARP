@@ -17,6 +17,32 @@ export function Login() {
     }
   }, []);
 
+  // Função para lidar com a alteração do checkbox em tempo real
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const marcado = e.target.checked;
+    setSalvarEmail(marcado);
+
+    if (marcado && email.trim() !== '') {
+      localStorage.setItem('earp_remembered_email', email);
+    } else {
+      localStorage.removeItem('earp_remembered_email');
+    }
+  };
+
+  // Atualiza também no localStorage caso o usuário digite o e-mail com a caixa já marcada
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const novoEmail = e.target.value;
+    setEmail(novoEmail);
+
+    if (salvarEmail) {
+      if (novoEmail.trim() !== '') {
+        localStorage.setItem('earp_remembered_email', novoEmail);
+      } else {
+        localStorage.removeItem('earp_remembered_email');
+      }
+    }
+  };
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setCarregando(true);
@@ -61,7 +87,7 @@ export function Login() {
         }
       }
 
-      // 3. SE ESTIVER ATIVO: Trata o e-mail salvo e entra no sistema
+      // 3. SE ESTIVER ATIVO: Garante o salvamento do e-mail e entra no sistema
       if (salvarEmail) {
         localStorage.setItem('earp_remembered_email', email);
       } else {
@@ -103,7 +129,7 @@ export function Login() {
               type="email"
               required
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={handleEmailChange}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 text-slate-900"
               placeholder="seu@email.com"
             />
@@ -145,7 +171,7 @@ export function Login() {
               <input
                 type="checkbox"
                 checked={salvarEmail}
-                onChange={(e) => setSalvarEmail(e.target.checked)}
+                onChange={handleCheckboxChange}
                 className="w-4 h-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 accent-slate-900 cursor-pointer"
               />
               Lembrar e-mail

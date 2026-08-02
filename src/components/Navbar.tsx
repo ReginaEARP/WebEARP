@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { User, LogOut, ChevronDown, Mail, KeyRound, X, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
+import { User, LogOut, ChevronDown, Mail, KeyRound, X, Eye, EyeOff, CheckCircle2, AlertCircle, Bell } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 
 interface PerfilUsuario {
@@ -37,6 +37,7 @@ export function Navbar({ onLogout }: NavbarProps) {
     '/relatorios': 'Relatórios',
     '/usuarios': 'Gestão de Usuários',
     '/configuracoes': 'Configurações do Sistema',
+    '/processos/central-custos': 'Gestão de Custos e Guias (GPS)',
   };
 
   const tituloAtual = titulos[location.pathname] || 'Sistema';
@@ -148,85 +149,98 @@ export function Navbar({ onLogout }: NavbarProps) {
           {tituloAtual}
         </h1>
 
-        <div className="flex items-center gap-3 relative" ref={dropdownRef}>
-          {loading ? (
-            <div className="w-9 h-9 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse" />
-          ) : (
-            <>
-              {/* Botão Clicável - Avatar + Ícone Chevron */}
-              <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none"
-              >
-                <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-gray-700 flex items-center justify-center text-blue-600 dark:text-blue-400 overflow-hidden border border-blue-200 dark:border-gray-600">
-                  {userProfile?.avatar_url ? (
-                    <img
-                      src={userProfile.avatar_url}
-                      alt="Avatar"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <User className="w-5 h-5" />
-                  )}
-                </div>
+        <div className="flex items-center gap-4">
+          {/* Sino de Notificação */}
+          <button
+            type="button"
+            className="p-2 rounded-full text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors relative focus:outline-none"
+            aria-label="Notificações"
+          >
+            <Bell className="w-5 h-5" />
+            {/* Indicador opcional de notificação ativa */}
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-blue-600 rounded-full ring-2 ring-white dark:ring-gray-800" />
+          </button>
 
-                <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-              </button>
+          <div className="flex items-center gap-3 relative" ref={dropdownRef}>
+            {loading ? (
+              <div className="w-9 h-9 rounded-full bg-slate-200 dark:bg-slate-700 animate-pulse" />
+            ) : (
+              <>
+                {/* Botão Clicável - Avatar + Ícone Chevron */}
+                <button
+                  onClick={() => setIsOpen(!isOpen)}
+                  className="flex items-center gap-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors focus:outline-none"
+                >
+                  <div className="w-9 h-9 rounded-full bg-blue-100 dark:bg-gray-700 flex items-center justify-center text-blue-600 dark:text-blue-400 overflow-hidden border border-blue-200 dark:border-gray-600">
+                    {userProfile?.avatar_url ? (
+                      <img
+                        src={userProfile.avatar_url}
+                        alt="Avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-5 h-5" />
+                    )}
+                  </div>
 
-              {/* Dropdown de Opções */}
-              {isOpen && (
-                <div className="absolute right-0 top-12 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 transition-all z-50">
-                  
-                  {/* Bloco de Informações do Usuário */}
-                  <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
-                    <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">
-                      Conectado como
-                    </p>
+                  <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Dropdown de Opções */}
+                {isOpen && (
+                  <div className="absolute right-0 top-12 w-64 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 transition-all z-50">
                     
-                    {/* Nome + Badge de Nível ao lado */}
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
-                        {userProfile?.nome || 'Usuário'}
+                    {/* Bloco de Informações do Usuário */}
+                    <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-700">
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 font-medium">
+                        Conectado como
                       </p>
-                      <span className="inline-flex items-center text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-800/50 shrink-0">
-                        {roleFormatada}
-                      </span>
+                      
+                      {/* Nome + Badge de Nível ao lado */}
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate">
+                          {userProfile?.nome || 'Usuário'}
+                        </p>
+                        <span className="inline-flex items-center text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-800/50 shrink-0">
+                          {roleFormatada}
+                        </span>
+                      </div>
+
+                      {/* E-mail */}
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">
+                          {userProfile?.email || 'usuario@sistema.com'}
+                        </p>
+                      </div>
                     </div>
 
-                    {/* E-mail */}
-                    <div className="flex items-center gap-1.5 mt-1">
-                      <Mail className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 truncate">
-                        {userProfile?.email || 'usuario@sistema.com'}
-                      </p>
+                    {/* Ações abaixo do divisor */}
+                    <div className="pt-1">
+                      <button
+                        onClick={() => {
+                          setIsOpen(false);
+                          setIsModalSenhaOpen(true);
+                        }}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors font-medium"
+                      >
+                        <KeyRound className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                        <span>Alterar Senha</span>
+                      </button>
+
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Sair</span>
+                      </button>
                     </div>
                   </div>
-
-                  {/* Ações abaixo do divisor */}
-                  <div className="pt-1">
-                    <button
-                      onClick={() => {
-                        setIsOpen(false);
-                        setIsModalSenhaOpen(true);
-                      }}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors font-medium"
-                    >
-                      <KeyRound className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                      <span>Alterar Senha</span>
-                    </button>
-
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors font-medium"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span>Sair</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+                )}
+              </>
+            )}
+          </div>
         </div>
       </header>
 

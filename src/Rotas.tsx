@@ -8,6 +8,7 @@ import { Clientes } from './pages/clientes/Clientes';
 import { Parceiros } from './pages/parceiros/Parceiros'
 import { Processos } from './pages/processos/Processos';
 import { Relatorios } from './pages/relatorios/Relatorios';
+import { CentralCustosGpsPage } from './pages/processos/PageGps';
 import { Configuracoes } from './pages/configuracao/Configuracoes';
 import { Usuarios } from './pages/usuarios/Usuarios';
 
@@ -78,6 +79,7 @@ export function AppRoutes({ darkMode, setDarkMode }: AppRoutesProps) {
       <Route path="/agenda" element={<div className="p-6">Agenda & Prazos (Em breve)</div>} />
       <Route path="/financeiro" element={<div className="p-6">Módulo Financeiro (Em breve)</div>} />
       <Route path="/relatorios" element={<div className="p-6">Módulo Financeiro (Em breve)</div>} />
+      <Route path="/processos/central-custos" element={<CentralCustosGpsPage />} />
 
       {/* Rota de Gestão de Usuários com proteção de acesso */}
       <Route 

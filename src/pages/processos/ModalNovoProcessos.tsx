@@ -22,7 +22,7 @@ export function ModalCadastroEdicaoProcessos({ isOpen, onClose, processoId, onSu
   const [parceiroId, setParceiroId] = useState('');
   const [numeroProtocolo, setNumeroProtocolo] = useState('');
   const [tipoDemanda, setTipoDemanda] = useState('');
-  const [status, setStatus] = useState('pendente');
+  const [status, setStatus] = useState('Protocolado / Entrada'); // Padronizado
   const [dataLimiteExigencia, setDataLimiteExigencia] = useState('');
   const [procuracaoEntregue, setProcuracaoEntregue] = useState(false);
   const [observacoes, setObservacoes] = useState('');
@@ -68,7 +68,7 @@ export function ModalCadastroEdicaoProcessos({ isOpen, onClose, processoId, onSu
         setParceiroId(data.parceiro_id || '');
         setNumeroProtocolo(data.numero_protocolo || '');
         setTipoDemanda(data.tipo_demanda || '');
-        setStatus(data.status || 'pendente');
+        setStatus(data.status || 'Protocolado / Entrada');
         setDataLimiteExigencia(data.data_limite_exigencia ? data.data_limite_exigencia.split('T')[0] : '');
         setProcuracaoEntregue(data.procuracao_entregue || false);
         setObservacoes(data.observacoes || '');
@@ -85,7 +85,7 @@ export function ModalCadastroEdicaoProcessos({ isOpen, onClose, processoId, onSu
     setParceiroId('');
     setNumeroProtocolo('');
     setTipoDemanda('');
-    setStatus('pendente');
+    setStatus('Protocolado / Entrada'); // Força o padrão ao criar novo
     setDataLimiteExigencia('');
     setProcuracaoEntregue(false);
     setObservacoes('');
@@ -100,7 +100,7 @@ export function ModalCadastroEdicaoProcessos({ isOpen, onClose, processoId, onSu
 
     setSaving(true);
     try {
-      const payload = {
+      const payload: any = {
         cliente_id: clienteId,
         parceiro_id: parceiroId || null,
         numero_protocolo: numeroProtocolo,
@@ -119,10 +119,26 @@ export function ModalCadastroEdicaoProcessos({ isOpen, onClose, processoId, onSu
           .eq('id', processoId);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        // Se for novo, garante que o status inicial seja "Protocolado / Entrada"
+        payload.status = 'Protocolado / Entrada';
+        
+        const { error, data: novoProcesso } = await supabase
           .from('processos')
-          .insert([payload]);
+          .insert([payload])
+          .select()
+          .single();
+        
         if (error) throw error;
+
+        // Opcional: já insere o primeiro registro automático na tabela de histórico/andamentos
+        if (novoProcesso) {
+          await supabase.from('processo_andamentos').insert([{
+            processo_id: novoProcesso.id,
+            data: new Date().toISOString().split('T')[0],
+            status_etapa: 'Protocolado / Entrada',
+            descricao: 'Processo cadastrado no sistema.'
+          }]);
+        }
       }
 
       onSuccess();
@@ -237,40 +253,7 @@ export function ModalCadastroEdicaoProcessos({ isOpen, onClose, processoId, onSu
                 />
               </div>
             </div>
-
-            {/* Linha 3: Status e Data Limite de Exigência */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                  Status do Processo
-                </label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="pendente">Pendente</option>
-                  <option value="em_analise">Em Análise</option>
-                  <option value="exigencia">Em Exigência</option>
-                  <option value="deferido">Deferido</option>
-                  <option value="indeferido">Indeferido</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-red-500" />
-                  Data Limite de Exigência (Prazo Fatal)
-                </label>
-                <input
-                  type="date"
-                  value={dataLimiteExigencia}
-                  onChange={(e) => setDataLimiteExigencia(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
+            
             {/* Checkbox de Procuração */}
             <div className="flex items-center gap-2 pt-1">
               <input

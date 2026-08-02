@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../services/supabaseClient';
-import { X, Loader2, Plus, DollarSign, Trash2, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
+import { X, Loader2, Plus, DollarSign, Trash2, CheckCircle2, AlertCircle, FileText, AlertTriangle, Clock } from 'lucide-react';
 
 interface ModalDespesasGpsProps {
   isOpen: boolean;
@@ -113,6 +113,42 @@ export function ModalDespesasGps({ isOpen, onClose, processoId, numeroProtocolo 
       mostrarFeedback('Erro ao excluir despesa: ' + err.message, 'erro');
       setDespesaParaExcluir(null);
     }
+  };
+
+  // Função para calcular o status de vencimento se estiver Pendente
+  const calcularAlertaVencimento = (dataVencimentoStr: string, status: string) => {
+    if (status === 'Pago' || status === 'Cancelado' || !dataVencimentoStr) return null;
+
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const [ano, mes, dia] = dataVencimentoStr.split('-').map(Number);
+    const vencimento = new Date(ano, mes - 1, dia);
+    vencimento.setHours(0, 0, 0, 0);
+
+    const diffTime = vencimento.getTime() - hoje.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return {
+        texto: `Vencido há ${Math.abs(diffDays)} ${Math.abs(diffDays) === 1 ? 'dia' : 'dias'}`,
+        classe: 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200 dark:border-rose-900',
+        icone: AlertTriangle
+      };
+    } else if (diffDays === 0) {
+      return {
+        texto: 'Vence Hoje!',
+        classe: 'bg-orange-50 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300 border border-orange-200 dark:border-orange-900',
+        icone: Clock
+      };
+    } else if (diffDays <= 3) {
+      return {
+        texto: `Vence em ${diffDays} ${diffDays === 1 ? 'dia' : 'dias'}`,
+        classe: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-900',
+        icone: Clock
+      };
+    }
+    return null;
   };
 
   if (!isOpen) return null;
@@ -262,57 +298,72 @@ export function ModalDespesasGps({ isOpen, onClose, processoId, numeroProtocolo 
             </p>
           ) : (
             <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
-              {despesas.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm flex items-center justify-between gap-2"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${
-                      item.status_pagamento === 'Pago'
-                        ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
-                        : item.status_pagamento === 'Cancelado'
-                        ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
-                        : 'amber' in { [item.status_pagamento]: true } || item.status_pagamento === 'Pendente'
-                        ? 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
-                        : 'bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300'
-                    }`}>
-                      {item.status_pagamento}
-                    </span>
-                    <div>
-                      <p className="text-xs font-bold text-gray-800 dark:text-gray-200">
-                        Comp: {item.competencia} — <span className="text-emerald-600 dark:text-emerald-400 font-mono">R$ {Number(item.valor).toFixed(2)}</span>
-                      </p>
-                      {item.data_vencimento && (
-                        <p className="text-[10px] text-gray-400 font-mono">
-                          Vencimento: {new Date(item.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}
-                        </p>
+              {despesas.map((item) => {
+                const alerta = calcularAlertaVencimento(item.data_vencimento, item.status_pagamento);
+                const AlertaIcon = alerta?.icone;
+
+                return (
+                  <div
+                    key={item.id}
+                    className="p-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm flex items-center justify-between gap-2"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${
+                        item.status_pagamento === 'Pago'
+                          ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300'
+                          : item.status_pagamento === 'Cancelado'
+                          ? 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400'
+                          : 'bg-amber-50 dark:bg-amber-950 text-amber-700 dark:text-amber-300'
+                      }`}>
+                        {item.status_pagamento}
+                      </span>
+                      
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                            Comp: {item.competencia} — <span className="text-emerald-600 dark:text-emerald-400 font-mono">R$ {Number(item.valor).toFixed(2)}</span>
+                          </p>
+
+                          {/* Badge de Alerta de Vencimento */}
+                          {alerta && AlertaIcon && (
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${alerta.classe}`}>
+                              <AlertaIcon className="w-3 h-3" />
+                              <span>{alerta.texto}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {item.data_vencimento && (
+                          <p className="text-[10px] text-gray-400 font-mono mt-0.5">
+                            Vencimento: {new Date(item.data_vencimento + 'T00:00:00').toLocaleDateString('pt-BR')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {item.comprovante_url && (
+                        <a
+                          href={item.comprovante_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors p-1"
+                          title="Ver Comprovante"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                        </a>
                       )}
+                      <button
+                        onClick={() => setDespesaParaExcluir(item.id)}
+                        className="text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors p-1"
+                        title="Excluir despesa"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    {item.comprovante_url && (
-                      <a
-                        href={item.comprovante_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors p-1"
-                        title="Ver Comprovante"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                      </a>
-                    )}
-                    <button
-                      onClick={() => setDespesaParaExcluir(item.id)}
-                      className="text-gray-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors p-1"
-                      title="Excluir despesa"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

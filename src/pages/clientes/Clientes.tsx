@@ -30,6 +30,46 @@ interface Cliente {
   data_nascimento?: string;
 }
 
+// Funções utilitárias de máscara
+const formatarCpfCnpj = (valor: string) => {
+  if (!valor) return '-';
+  const apenasNumeros = valor.replace(/\D/g, '');
+
+  if (apenasNumeros.length <= 11) {
+    // Máscara CPF: 000.000.000-00
+    return apenasNumeros
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  } else {
+    // Máscara CNPJ: 00.000.000/0000-00
+    return apenasNumeros
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+  }
+};
+
+const formatarTelefone = (valor: string) => {
+  if (!valor) return '-';
+  const apenasNumeros = valor.replace(/\D/g, '');
+
+  if (apenasNumeros.length === 11) {
+    // Celular com 9 dígitos: (00) 00000-0000
+    return apenasNumeros
+      .replace(/^(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{5})(\d{4})$/, '$1-$2');
+  } else if (apenasNumeros.length === 10) {
+    // Fixo com 8 dígitos: (00) 0000-0000
+    return apenasNumeros
+      .replace(/^(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{4})(\d{4})$/, '$1-$2');
+  }
+
+  return valor; // Retorna o original caso não encaixe nos tamanhos padrão
+};
+
 export function Clientes() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
@@ -334,7 +374,7 @@ export function Clientes() {
                       </td>
 
                       <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-300">
-                        {cliente.cpf_cnpj}
+                        {formatarCpfCnpj(cliente.cpf_cnpj)}
                       </td>
 
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -357,7 +397,7 @@ export function Clientes() {
                       </td>
 
                       <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-300">
-                        {cliente.contato_whatsapp}
+                        {formatarTelefone(cliente.contato_whatsapp)}
                       </td>
 
                       <td className="px-6 py-4 whitespace-nowrap text-right">

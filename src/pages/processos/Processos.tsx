@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // <--- 1. IMPORTADO O USE-NAVIGATE
 import { supabase } from '../../services/supabaseClient';
-import { ModalCadastroEdicaoProcessos } from './ModalProcessos';
+import { ModalCadastroEdicaoProcessos } from './ModalNovoProcessos';
 import { ModalHistoricoAndamento } from './ModalHistoricoAndamento';
-import { ModalDespesasGps } from './ModalDespesasGps'; // <--- 1. IMPORTADO AQUI
+import { ModalDespesasGps } from './ModalGpsCliente';
 import { 
   Plus, 
   Search, 
@@ -17,14 +18,14 @@ import {
   Calendar,
   Users,
   Building2,
-  DollarSign // <--- Ícone de Custos/Dinheiro
+  DollarSign
 } from 'lucide-react';
 
 interface Processo {
   id: string;
   numero_protocolo: string;
   tipo_demanda: string;
-  status: 'pendente' | 'em_analise' | 'exigencia' | 'deferido' | 'indeferido';
+  status: 'Protocolado / Entrada' | 'Em análise' | 'Em exigência' | 'Deferido' | 'Indeferido';
   data_limite_exigencia?: string;
   procuracao_entregue: boolean;
   observacoes?: string;
@@ -40,15 +41,16 @@ interface Processo {
 }
 
 export function Processos() {
+  const navigate = useNavigate(); // <--- 2. INICIALIZADO O NAVIGATE
   const [processos, setProcessos] = useState<Processo[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState<string>('todos');
+  const [activeTab, setActiveTab] = useState<string>('Em análise');
   
   const [processoHistoricoId, setProcessoHistoricoId] = useState<string | null>(null);
   const [protocoloHistorico, setProtocoloHistorico] = useState<string>('');
 
-  // <--- 2. ESTADOS PARA O MODAL DE CUSTOS / GPS
+  // Estados para o Modal Individual de Custos / GPS por Processo
   const [processoCustosId, setProcessoCustosId] = useState<string | null>(null);
   const [protocoloCustos, setProtocoloCustos] = useState<string>('');
 
@@ -115,7 +117,6 @@ export function Processos() {
     fetchProcessos();
   }, []);
 
-  // Define se o usuário tem permissão para excluir processos (admin ou gerente)
   const podeExcluir = userRole === 'admin' || userRole === 'gerente';
 
   const handleExecuteDelete = async () => {
@@ -140,23 +141,30 @@ export function Processos() {
   };
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
+    switch (status?.toLowerCase()) {
+      case 'protocolado':
+      case 'entrada':
+        return <span className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1 w-fit"><Clock className="w-3 h-3"/> Protocolado</span>;
       case 'pendente':
         return <span className="bg-yellow-50 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-300 px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1 w-fit"><Clock className="w-3 h-3"/> Pendente</span>;
       case 'em_analise':
+      case 'em analise':
+      case 'em análise':
         return <span className="bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1 w-fit"><FileText className="w-3 h-3"/> Em Análise</span>;
       case 'exigencia':
+      case 'exigência':
+      case 'em exigencia':
+      case 'em exigência':
         return <span className="bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1 w-fit"><AlertTriangle className="w-3 h-3"/> Exigência</span>;
       case 'deferido':
         return <span className="bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1 w-fit"><CheckCircle className="w-3 h-3"/> Deferido</span>;
       case 'indeferido':
         return <span className="bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1 w-fit"><XCircle className="w-3 h-3"/> Indeferido</span>;
       default:
-        return <span className="bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full text-xs font-semibold">{status}</span>;
+        return <span className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 px-2.5 py-1 rounded-full text-xs font-semibold">{status}</span>;
     }
   };
 
-  // Filtragem por busca e abas
   const filteredProcessos = processos.filter(proc => {
     const term = searchTerm.toLowerCase();
     const matchesSearch = 
@@ -178,7 +186,7 @@ export function Processos() {
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
       
-      {/* Topo: Campo de Pesquisa e Botão Novo */}
+      {/* Topo: Campo de Pesquisa, Botão Central Geral e Botão Novo */}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="relative w-full sm:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -191,27 +199,38 @@ export function Processos() {
           />
         </div>
 
-        <button
-          onClick={() => {
-            setProcessoParaEditar(null);
-            setIsModalOpen(true);
-          }}
-          className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm transition-colors shadow-sm"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Novo Processo</span>
-        </button>
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {/* <--- 3. BOTÃO AGORA NAVEGA PARA A PÁGINA OCULTA */}
+          <button
+            onClick={() => navigate('/processos/central-custos')}
+            className="w-full sm:w-auto bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-medium px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm transition-colors shadow-sm"
+          >
+            <DollarSign className="w-4 h-4" />
+            <span>GPS</span>
+          </button>
+
+          {/* Botão Novo Processo */}
+          <button
+            onClick={() => {
+              setProcessoParaEditar(null);
+              setIsModalOpen(true);
+            }}
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm transition-colors shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Novo Processo</span>
+          </button>
+        </div>
       </div>
 
       {/* Abas de Filtro por Status */}
       <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
         {[
-          { id: 'todos', label: 'Todos', icon: FileText },
-          { id: 'pendente', label: 'Pendentes', icon: Clock },
-          { id: 'em_analise', label: 'Em Análise', icon: FileText },
-          { id: 'exigencia', label: 'Exigência', icon: AlertTriangle },
-          { id: 'deferido', label: 'Deferidos', icon: CheckCircle },
-          { id: 'indeferido', label: 'Indeferidos', icon: XCircle },
+          { id: 'Protocolado / Entrada', label: 'Pendentes', icon: Clock },
+          { id: 'Em análise', label: 'Em Análise', icon: FileText },
+          { id: 'Em exigência', label: 'Exigência', icon: AlertTriangle },
+          { id: 'Deferido', label: 'Deferidos', icon: CheckCircle },
+          { id: 'Indeferido', label: 'Indeferidos', icon: XCircle },
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -318,14 +337,14 @@ export function Processos() {
                           <Clock className="w-4 h-4" />
                         </button>
 
-                        {/* <--- 3. BOTÃO DE CUSTOS E GUIAS (GPS) ADICIONADO AQUI */}
+                        {/* Botão Individual de Custos e Guias (GPS) */}
                         <button
                           onClick={() => {
                             setProcessoCustosId(proc.id);
                             setProtocoloCustos(proc.numero_protocolo);
                           }}
                           className="p-1.5 text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 rounded-lg hover:bg-emerald-50 dark:hover:bg-gray-700 transition-colors"
-                          title="Gestão de Custos e Guias (GPS)"
+                          title="Gestão de Custos e Guias (GPS) deste Processo"
                         >
                           <DollarSign className="w-4 h-4" />
                         </button>
@@ -418,12 +437,15 @@ export function Processos() {
       {/* MODAL DE HISTÓRICO DE ANDAMENTOS */}
       <ModalHistoricoAndamento
         isOpen={!!processoHistoricoId}
-        onClose={() => setProcessoHistoricoId(null)}
+        onClose={async () => {
+          setProcessoHistoricoId(null);
+          await fetchProcessos(); // Atualiza a tabela sempre que o modal fechar
+        }}
         processoId={processoHistoricoId}
         numeroProtocolo={protocoloHistorico}
       />
 
-      {/* <--- 4. RENDERIZAÇÃO DO MODAL DE CUSTOS E GUIAS (GPS) */}
+      {/* MODAL INDIVIDUAL DE CUSTOS E GUIAS (GPS) */}
       <ModalDespesasGps
         isOpen={!!processoCustosId}
         onClose={() => setProcessoCustosId(null)}

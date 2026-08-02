@@ -43,6 +43,41 @@ const initialFormState = {
   ativo: true,
 };
 
+// Funções Auxiliares de Máscaras
+const formatarCpfCnpj = (value: string) => {
+  const nums = value.replace(/\D/g, '');
+  if (nums.length <= 11) {
+    return nums
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  } else {
+    return nums
+      .replace(/^(\d{2})(\d)/, '$1.$2')
+      .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d)/, '.$1/$2')
+      .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
+  }
+};
+
+const formatarTelefone = (value: string) => {
+  const nums = value.replace(/\D/g, '');
+  if (nums.length <= 10) {
+    return nums
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{4})(\d)/, '$1-$2');
+  } else {
+    return nums
+      .replace(/(\d{2})(\d)/, '($1) $2')
+      .replace(/(\d{5})(\d)/, '$1-$2');
+  }
+};
+
+const formatarCep = (value: string) => {
+  const nums = value.replace(/\D/g, '');
+  return nums.replace(/(\d{5})(\d)/, '$1-$2');
+};
+
 export function ModalCadastroEdicaoClientes({ isOpen, onClose, clienteId, onSuccess }: ModalProps) {
   const [formData, setFormData] = useState(initialFormState);
   const [loading, setLoading] = useState(false);
@@ -70,9 +105,9 @@ export function ModalCadastroEdicaoClientes({ isOpen, onClose, clienteId, onSucc
             setFormData({
               matricula: data.matricula || '',
               nome_completo: data.nome_completo || '',
-              cpf_cnpj: data.cpf_cnpj || '',
-              contato_whatsapp: data.contato_whatsapp || '',
-              contato_secundario: data.contato_secundario || '',
+              cpf_cnpj: formatarCpfCnpj(data.cpf_cnpj || ''),
+              contato_whatsapp: formatarTelefone(data.contato_whatsapp || ''),
+              contato_secundario: formatarTelefone(data.contato_secundario || ''),
               email: data.email || '',
               senha_gov: data.senha_gov || '',
               tipo_pessoa: data.tipo_pessoa || 'FISICA',
@@ -82,7 +117,7 @@ export function ModalCadastroEdicaoClientes({ isOpen, onClose, clienteId, onSucc
               estado_civil: data.estado_civil || '',
               profissao: data.profissao || '',
               nome_mae: data.nome_mae || '',
-              cep: data.cep || '',
+              cep: formatarCep(data.cep || ''),
               logradouro: data.logradouro || '',
               numero: data.numero || '',
               complemento: data.complemento || '',
@@ -110,7 +145,6 @@ export function ModalCadastroEdicaoClientes({ isOpen, onClose, clienteId, onSucc
 
   // 2. Atualiza a matrícula dinamicamente com base na primeira letra do Nome Completo
   useEffect(() => {
-    // Não altera matrícula se for edição de cliente existente ou se a tela não estiver aberta
     if (!isOpen || clienteId) return;
 
     const nomeLimpo = formData.nome_completo.trim();
@@ -121,7 +155,6 @@ export function ModalCadastroEdicaoClientes({ isOpen, onClose, clienteId, onSucc
 
     const primeiraLetra = nomeLimpo.charAt(0).toUpperCase();
 
-    // Filtra para garantir que é uma letra A-Z
     if (!/[A-Z]/.test(primeiraLetra)) return;
 
     const buscarProximaMatricula = async () => {
@@ -140,7 +173,6 @@ export function ModalCadastroEdicaoClientes({ isOpen, onClose, clienteId, onSucc
       }
     };
 
-    // Debounce leve para evitar chamadas excessivas ao banco enquanto digita
     const timer = setTimeout(() => {
       buscarProximaMatricula();
     }, 300);
@@ -177,8 +209,13 @@ export function ModalCadastroEdicaoClientes({ isOpen, onClose, clienteId, onSucc
     e.preventDefault();
     setSaving(true);
 
+    // Limpeza de máscaras antes de enviar ao banco de dados
     const payload = {
       ...formData,
+      cpf_cnpj: formData.cpf_cnpj.replace(/\D/g, ''),
+      contato_whatsapp: formData.contato_whatsapp.replace(/\D/g, ''),
+      contato_secundario: formData.contato_secundario ? formData.contato_secundario.replace(/\D/g, '') : null,
+      cep: formData.cep.replace(/\D/g, ''),
       sexo: formData.sexo || null,
       estado_civil: formData.estado_civil || null,
       data_nascimento: formData.data_nascimento || null,
@@ -283,8 +320,9 @@ export function ModalCadastroEdicaoClientes({ isOpen, onClose, clienteId, onSucc
                   <input
                     type="text"
                     required
+                    maxLength={18}
                     value={formData.cpf_cnpj}
-                    onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, cpf_cnpj: formatarCpfCnpj(e.target.value) })}
                     className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
                     placeholder="000.000.000-00"
                   />
@@ -389,8 +427,9 @@ export function ModalCadastroEdicaoClientes({ isOpen, onClose, clienteId, onSucc
                   <input
                     type="text"
                     required
+                    maxLength={15}
                     value={formData.contato_whatsapp}
-                    onChange={(e) => setFormData({ ...formData, contato_whatsapp: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, contato_whatsapp: formatarTelefone(e.target.value) })}
                     className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
                     placeholder="(87) 99999-0000"
                   />
@@ -402,10 +441,11 @@ export function ModalCadastroEdicaoClientes({ isOpen, onClose, clienteId, onSucc
                   </label>
                   <input
                     type="text"
+                    maxLength={15}
                     value={formData.contato_secundario}
-                    onChange={(e) => setFormData({ ...formData, contato_secundario: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, contato_secundario: formatarTelefone(e.target.value) })}
                     className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="Fixo / Recado"
+                    placeholder="(87) 3871-0000"
                   />
                 </div>
 
@@ -479,9 +519,10 @@ export function ModalCadastroEdicaoClientes({ isOpen, onClose, clienteId, onSucc
                   <div className="relative">
                     <input
                       type="text"
+                      maxLength={9}
                       value={formData.cep}
                       onChange={(e) => {
-                        const val = e.target.value;
+                        const val = formatarCep(e.target.value);
                         setFormData({ ...formData, cep: val });
                         handleBuscarCep(val);
                       }}
@@ -562,7 +603,7 @@ export function ModalCadastroEdicaoClientes({ isOpen, onClose, clienteId, onSucc
                   <input
                     type="text"
                     value={formData.estado}
-                    onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, estado: e.target.value.toUpperCase() })}
                     className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none uppercase"
                     maxLength={2}
                   />
